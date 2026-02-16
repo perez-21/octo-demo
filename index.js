@@ -1,17 +1,16 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
 const { Conversation, Message, Response } = require("./models");
 const { classifyIntent, addToCart, checkout } = require("./intent");
 const { generateResponse } = require("./gemma");
-const { formatConversation } = require("./utils");
+const { formatConversation, formatConversationForGroq } = require("./utils");
+const { GenerateResponseContext, GeminiGenerateResponseStrategy, GroqGenerateResponseStrategy } = require("./generateResponse.strategy.js");
 
-dotenv.config();
-
+const { PORT, MONGO_URI, GROQ_API_KEY } = require("./config");
 const app = express();
-const mongoURI = "mongodb://localhost:27017/octodemo-db";
+const mongoURI = MONGO_URI;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -50,13 +49,15 @@ app.post("/api/messages", async (req, res) => {
     await conversation.save();
 
     // classify intent
-    console.log('moving to classification');
-    const { intent, entities } = await classifyIntent(
-      conversation.context,
-      formatConversation(conversation.messages),
-    );
+    // console.log('moving to classification');
+    // const { intent, entities } = await classifyIntent(
+    //   conversation.context,
+    //   formatConversationForGroq(conversation.messages),
+    // );
 
-    console.log('top level intent: ', intent);
+    // console.log('top level intent: ', intent);
+
+    const intent = '';
 
     let response;
     if (intent === "add-to-cart") {
@@ -65,7 +66,7 @@ app.post("/api/messages", async (req, res) => {
       response = await checkout(_, conversation.context, entities);
     } else {
       const instructions =
-        "Based on the system context and conversation, answer the user's question or provide a helpful response. Ensure that you strictly adhere to the JSON schema provided. Modify the system context object provided as needed. Make sure there is a `twiML` field in the schema and it contains an appropriate text response formatted in Twilio's TwiML syntax for Whatsapp. Ensure that you include the system context object in the `context` field.";
+        "Based on the system context and conversation, answer the user's question or provide a helpful response. Ensure that you strictly adhere to the JSON schema provided. Modify the system context object provided as needed. Make sure there is a `twiML` field in the schema and it contains an appropriate text response formatted in Twilio's TwiML syntax for Whatsapp. Do not use programmatic syntax aside from tags in the TwiML text. Ensure that you include the system context object in the `context` field. ";
 
       const responseSchema = z.object({
         twiML: z
@@ -74,12 +75,14 @@ app.post("/api/messages", async (req, res) => {
             "Appropriate text response formatted in Twilio's TwiML syntax for Whatsapp",
           ),
         context: z.object().describe("System context object"),
-      });
+      }).toJSONSchema();
+      responseSchema.additionalProperties = true;
 
-      const result = await generateResponse(
+      const generateResContext = new GenerateResponseContext(new GroqGenerateResponseStrategy(GROQ_API_KEY));
+      const result = await generateResContext.generateResponse(
         instructions,
-        zodToJsonSchema(responseSchema),
-        formatConversation(conversation.messages),
+        responseSchema,
+        formatConversationForGroq(conversation.messages),
         conversation.context,
       );
 
@@ -106,7 +109,7 @@ app.post("/api/messages", async (req, res) => {
     await conversation.save();
 
 
-    res.send(response.twiML);
+    return res.send(response.twiML);
   } catch (err) {}
 });
 
@@ -129,5 +132,5 @@ const connectDB = async () => {
 };
 
 connectDB().then(() => {
-  app.listen(3000, () => console.log("listening on port 3000"));
+  app.listen(PORT, () => console.log(`listening on port ${PORT}`));
 });

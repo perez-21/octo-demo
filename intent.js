@@ -1,5 +1,10 @@
 const { Product } = require("./models");
 const { generateResponse } = require("./gemma");
+const {
+  GenerateResponseContext,
+  GroqGenerateResponseStrategy,
+} = require("./generateResponse.strategy");
+const { GROQ_API_KEY } = require("./config");
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
 
@@ -45,23 +50,32 @@ async function checkout(business, context, entities) {
 async function classifyIntent(context, conversation) {
   console.log("in classifyIntent");
   const instructions =
-    "Based on the system context and conversation, classify the user's intention in their last message. Format the information according to the schema provided. Ensure that intentions are put in the `intent` field and entities in the `entities` field ";
-  const intentSchema = z.object({
-    intent: z
-      .templateLiteral(["add-to-cart", "checkout", "other"])
-      .describe("The user's intention in the most recent message"),
-    entities: z
-      .object({
-        productId: z
-          .string()
-          .describe("The id of the product the user is adding to the cart"),
-      })
-      .describe("API entities a user refers to"),
-  });
+    "Based on the system context and conversation, classify the user's intention in their last message. Format the information according to the schema provided.  ";
+  const intentSchema = z
+    .object({
+      intent: z
+        .templateLiteral(["add-to-cart", "checkout", "other"])
+        .describe("The user's intention in the most recent message"),
+      entities: z
+        .object({
+          productId: z
+            .string()
+            .describe("The id of the product the user is adding to the cart"),
+        })
+        .describe("API entities a user refers to"),
+    })
+    .toJSONSchema();
+
   console.log("in classifyIntent");
-  const response = await generateResponse(
+  const generateResContext = new GenerateResponseContext(
+    new GroqGenerateResponseStrategy(GROQ_API_KEY),
+  );
+
+  intentSchema.additionalProperties = true;
+
+  const response = await generateResContext.generateResponse(
     instructions,
-    zodToJsonSchema(intentSchema),
+    intentSchema,
     conversation,
     context,
   );
