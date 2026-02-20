@@ -1,5 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const MessagingResponse = require("twilio").twiml.MessagingResponse;
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
 const { businessesRouter } = require("./routes");
@@ -75,7 +76,7 @@ app.post("/api/messages", async (req, res) => {
         twiML: z
           .string()
           .describe(
-            "Appropriate text response formatted in Twilio's TwiML syntax for Whatsapp",
+            "Appropriate text response",
           ),
         context: z.object().describe("System context object"),
       }).toJSONSchema();
@@ -94,17 +95,14 @@ app.post("/api/messages", async (req, res) => {
 
       if (result.error) {
         // handle error
-        return res.send(
-          "<Response><Message>An error occured, please message again later.</Message></Response>",
-        );
+        return res.send(new MessagingResponse().message('An error occured, please message again later.').toString())
       }
 
       response = result;
     }
+
+    response.twiML = new MessagingResponse().message(response.twiML).toString();
     
-    if (!isValidTwiML(response.twiML)) {
-      response.twiML = toTwiMl(response.twiML);
-    }
 
     const modelResponse = await Response.create({
       customerWaid: From,
@@ -125,7 +123,6 @@ app.post("/api/messages", async (req, res) => {
 
 
 app.post("/api/delivered", (req, res) => {
-  console.log(req.body);
   res.status(200).send();
 });
 
