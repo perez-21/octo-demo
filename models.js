@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
+
 const productSchema = new Schema({
   title: {
     type: String,
@@ -18,6 +19,24 @@ const productSchema = new Schema({
 });
 
 const Product = mongoose.model('Product', productSchema);
+
+const businessSchema = new Schema({
+  businessWaid: {
+    type: String,
+    required: true
+  },
+  flow: {
+    type: String,
+    required: true
+  },
+  instructions: {
+    type: String,
+  },
+  products: [productSchema]
+});
+
+const Business = mongoose.model('Business', businessSchema);
+
 
 const conversationSchema = new Schema({
   flowState: {
@@ -128,4 +147,4 @@ const Response = mongoose.model('Response', responseSchema);
 
 const Message = mongoose.model('Message', messageSchema);
 
-module.exports = { Message, Conversation, Product, Response }
+module.exports = { Message, Conversation, Product, Response, Business }

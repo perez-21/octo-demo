@@ -1,0 +1,1 @@
+module.exports.businessesController = require("./businesses.controller");

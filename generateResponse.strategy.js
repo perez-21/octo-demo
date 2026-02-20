@@ -34,7 +34,7 @@ class GeminiGenerateResponseStrategy extends IGenerateResponseStrategy {
             ]
           : conversation,
         config: {
-          systemInstruction: modelSystemInstructions + "\n" + instructions,
+          systemInstruction: instructions,
           responseMimeType: "application/json",
           responseSchema: schema,
         },
@@ -69,7 +69,7 @@ class GroqGenerateResponseStrategy extends IGenerateResponseStrategy {
 
       messages.unshift({
         role: "system",
-        content: ` ${modelSystemInstructions}\n${instructions}\n\nRespond with JSON matching this schema:\n${JSON.stringify(schema, null, 2)}`,
+        content: `${instructions}\n\nRespond with JSON matching this schema:\n${JSON.stringify(schema, null, 2)}`,
       });
 
       const client = new Groq({ apiKey: this.apiKey });

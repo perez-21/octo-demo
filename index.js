@@ -2,7 +2,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
-const { Conversation, Message, Response } = require("./models");
+const { businessesRouter } = require("./routes");
+const { Conversation, Message, Response, Business } = require("./models");
 const { classifyIntent, addToCart, checkout } = require("./intent");
 const { generateResponse } = require("./gemma");
 const { formatConversation, formatConversationForGroq } = require("./utils");
@@ -14,6 +15,8 @@ const mongoURI = MONGO_URI;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use("/api", businessesRouter);
 
 app.post("/api/messages", async (req, res) => {
   const { Body, To, From, MessageSid, MessagingServiceSid, ButtonPayload } =
@@ -78,9 +81,12 @@ app.post("/api/messages", async (req, res) => {
       }).toJSONSchema();
       responseSchema.additionalProperties = true;
 
+      const business = await Business.findOne({businessWaid: To});
+      
+
       const generateResContext = new GenerateResponseContext(new GroqGenerateResponseStrategy(GROQ_API_KEY));
       const result = await generateResContext.generateResponse(
-        instructions,
+        business.instructions + '\n' + business.flow + '\n' + instructions,
         responseSchema,
         formatConversationForGroq(conversation.messages),
         conversation.context,
@@ -111,6 +117,12 @@ app.post("/api/messages", async (req, res) => {
 
     return res.send(response.twiML);
   } catch (err) {}
+});
+
+
+app.post("/api/delivered", (req, res) => {
+  console.log(req.body);
+  res.status(200).send();
 });
 
 app.get("/api/health", (req, res) => {
