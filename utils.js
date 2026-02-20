@@ -3,10 +3,7 @@ const formatConversation = (conversation) => {
     if (message.messageSid) {
       const content = {
         role: "user",
-        parts: [
-          { text: message.text },
-          
-        ],
+        parts: [{ text: message.text }],
       };
       if (message.buttonPayload) {
         content.parts.push({ buttonPayload: message.buttonPayload });
@@ -24,10 +21,7 @@ const formatConversationForGroq = (conversation) => {
     if (message.messageSid) {
       const content = {
         role: "user",
-        parts: [
-          { text: message.text },
-          
-        ],
+        parts: [{ text: message.text }],
       };
       if (message.buttonPayload) {
         content.parts.push({ buttonPayload: message.buttonPayload });
@@ -41,7 +35,8 @@ const formatConversationForGroq = (conversation) => {
 };
 
 function isValidTwiML(str) {
-  const regex = /^<Response><Message>.*?<\/Message><\/Response>$/;
+  if (!str || typeof str !== "string") return false;
+  const regex = /^<Response><Message>.+?<\/Message><\/Response>$/s;
   return regex.test(str);
 }
 
@@ -49,4 +44,9 @@ function toTwiMl(str) {
   return `<Response><Message>${str}</Message></Response>`;
 }
 
-module.exports = { formatConversation, formatConversationForGroq, isValidTwiML, toTwiMl };
+module.exports = {
+  formatConversation,
+  formatConversationForGroq,
+  isValidTwiML,
+  toTwiMl,
+};
