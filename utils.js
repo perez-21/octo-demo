@@ -40,4 +40,13 @@ const formatConversationForGroq = (conversation) => {
   });
 };
 
-module.exports = { formatConversation, formatConversationForGroq };
+function isValidTwiML(str) {
+  const regex = /^<Response><Message>.*?<\/Message><\/Response>$/;
+  return regex.test(str);
+}
+
+function toTwiMl(str) {
+  return `<Response><Message>${str}</Message></Response>`;
+}
+
+module.exports = { formatConversation, formatConversationForGroq, isValidTwiML, toTwiMl };

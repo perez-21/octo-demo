@@ -6,7 +6,7 @@ const { businessesRouter } = require("./routes");
 const { Conversation, Message, Response, Business } = require("./models");
 const { classifyIntent, addToCart, checkout } = require("./intent");
 const { generateResponse } = require("./gemma");
-const { formatConversation, formatConversationForGroq } = require("./utils");
+const { isValidTwiML, toTwiMl, formatConversationForGroq } = require("./utils");
 const { GenerateResponseContext, GeminiGenerateResponseStrategy, GroqGenerateResponseStrategy } = require("./generateResponse.strategy.js");
 
 const { PORT, MONGO_URI, GROQ_API_KEY } = require("./config");
@@ -69,7 +69,7 @@ app.post("/api/messages", async (req, res) => {
       response = await checkout(_, conversation.context, entities);
     } else {
       const instructions =
-        "Based on the system context and conversation, answer the user's question or provide a helpful response. Ensure that you strictly adhere to the JSON schema provided. Modify the system context object provided as needed. Make sure there is a `twiML` field in the schema and it contains an appropriate text response formatted in Twilio's TwiML syntax for Whatsapp. Do not use programmatic syntax aside from tags in the TwiML text. Ensure that you include the system context object in the `context` field. ";
+        "";
 
       const responseSchema = z.object({
         twiML: z
@@ -100,6 +100,10 @@ app.post("/api/messages", async (req, res) => {
       }
 
       response = result;
+    }
+    
+    if (!isValidTwiML(response.twiML)) {
+      response.twiML = toTwiMl(response.twiML);
     }
 
     const modelResponse = await Response.create({
